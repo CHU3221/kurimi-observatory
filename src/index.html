@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="doc-title">쿠리미관측소 - 로비</title>
+    
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
+    <script src="config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: { 900: '#0B132B', 700: '#2A365C' },
+                        azure: '#007FFF',
+                        rinwhite: '#E2EAEB',
+                        ringray: '#9FA9BE',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .delay-tooltip { visibility: hidden; opacity: 0; transition: opacity 0.2s ease 0.4s, visibility 0.2s ease 0.4s; }
+        .group:hover .delay-tooltip { visibility: visible; opacity: 1; }
+        .moving-lens { animation: scan-magnifier 6s ease-in-out infinite; }
+        @keyframes scan-magnifier {
+            0%, 100% { transform: translate(-80px, -70px); }
+            33% { transform: translate(90px, -30px); }
+            66% { transform: translate(-20px, 80px); }
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #9FA9BE; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-rinwhite text-navy-900 font-sans min-h-screen flex flex-col relative overflow-y-scroll overflow-x-hidden">
+
+    <header class="flex-none w-full max-w-6xl mx-auto mt-8 px-6 flex justify-between items-center relative z-20">
+        <div class="flex flex-col gap-2">
+            <h1 class="text-4xl font-black flex items-center gap-3 text-navy-900">
+                <span class="w-5 h-5 bg-azure rounded-full shadow-sm"></span>
+                <span id="lobby-main-title">로딩 중...</span>
+            </h1>
+            <p id="lobby-sub-title" class="text-ringray font-semibold tracking-wide ml-8"></p>
+        </div>
+    </header>
+
+    <main class="flex-1 w-full max-w-6xl mx-auto mt-24 px-6 pb-16 flex flex-col relative">
+        <div class="absolute right-8 md:right-16 -top-[210px] w-[300px] h-[300px] pointer-events-none z-0">
+            <svg overflow="visible" width="100%" height="100%" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <g id="kurimi">
+                        <g transform="translate(-93, -87.5)">
+                            <circle cx="90.2512" cy="91.2614" r="77" fill="#FFF1DD"/>
+                            <circle cx="28.2512" cy="133.261" r="23" fill="#FFF1DD"/>
+                            <circle cx="156.251" cy="121.261" r="23" fill="#FFF1DD"/>
+                            <circle cx="119.251" cy="147.261" r="23" fill="#FFF1DD"/>
+                            <circle cx="139.251" cy="136.261" r="23" fill="#FFF1DD"/>
+                            <circle cx="91.2512" cy="151.261" r="23" fill="#FFF1DD"/>
+                            <circle cx="58.2512" cy="147.261" r="23" fill="#FFF1DD"/>
+                            <ellipse cx="74.7512" cy="85.7614" rx="8.5" ry="5.5" fill="#0651FF"/>
+                            <circle cx="149.511" cy="45.4487" r="36" transform="rotate(-37.6243 149.511 45.4487)" fill="#2D2926"/>
+                            <circle cx="150.212" cy="45.5395" r="28.5" transform="rotate(-37.6243 150.212 45.5395)" fill="#F0F6FF"/>
+                            <ellipse cx="39.2512" cy="105.761" rx="17" ry="7.5" fill="#FFDEDE"/>
+                            <ellipse cx="116.251" cy="105.761" rx="17" ry="7.5" fill="#FFDEDE"/>
+                            <ellipse cx="134.056" cy="57.9685" rx="16.5" ry="36" transform="rotate(-37.6243 134.056 57.9685)" fill="#FFF1DD"/>
+                            <circle cx="36.0011" cy="36.0011" r="36" transform="rotate(-129.218 36.0011 36.0011)" fill="#2D2926"/>
+                            <circle cx="36.0724" cy="35.2976" r="28.5" transform="rotate(-129.218 36.0724 35.2976)" fill="#F0F6FF"/>
+                            <ellipse cx="48.9459" cy="51.1019" rx="16.5" ry="36" transform="rotate(-129.218 48.9459 51.1019)" fill="#FFF1DD"/>
+                            <ellipse cx="42.992" cy="73.0816" rx="20.5" ry="29.4495" transform="rotate(21.1383 42.992 73.0816)" fill="#2D2926"/>
+                            <ellipse cx="114.675" cy="73.0132" rx="20.5" ry="29.4495" transform="rotate(-15 114.675 73.0132)" fill="#2D2926"/>
+                            <ellipse cx="109.757" cy="23.4535" rx="9.5" ry="9" transform="rotate(15 109.757 23.4535)" fill="#C51E1E"/>
+                            <path d="M112.44 18.4548L127.171 4.82602L128.319 6.18275L112.44 18.4548Z" fill="#510707"/>
+                        </g>
+                    </g>
+                    <clipPath id="lens-clip"><circle class="moving-lens" cx="300" cy="300" r="150" /></clipPath>
+                </defs>
+                <g transform="translate(300, 300)"><use href="#kurimi" x="0" y="0" /></g>
+                <g clip-path="url(#lens-clip)">
+                    <g transform="translate(300, 300) scale(1.6)"><use href="#kurimi" x="0" y="0" /></g>
+                </g>
+                <g class="moving-lens" pointer-events="none">
+                    <circle cx="300" cy="300" r="150" fill="#e6f7ff" fill-opacity="0.35" stroke="#2c3e50" stroke-width="16"/>
+                    <path d="M 190 300 A 110 110 0 0 1 300 190" fill="none" stroke="#ffffff" stroke-opacity="0.85" stroke-width="12" stroke-linecap="round"/>
+                    <path d="M 406 406 L 520 520" stroke="#8d6e63" stroke-width="32" stroke-linecap="round"/>
+                    <path d="M 396 396 L 430 430" stroke="#5d4037" stroke-width="32" stroke-linecap="round"/>
+                </g>
+            </svg>
+        </div>
+
+        <div class="relative z-10 flex flex-col">
+            <div class="flex items-center gap-4 mb-4 ml-2">
+                <button onclick="changeMonth(-1)" class="p-2 text-ringray hover:text-azure hover:bg-azure/10 rounded-full transition-all cursor-pointer">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <h2 id="calendar-month-title" class="text-3xl font-bold text-navy-900 tracking-tight select-none"></h2>
+                <button onclick="changeMonth(1)" class="p-2 text-ringray hover:text-azure hover:bg-azure/10 rounded-full transition-all cursor-pointer">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+
+            <div class="flex flex-col bg-white border border-ringray/30 rounded-2xl shadow-sm overflow-hidden">
+                <div class="grid grid-cols-7 bg-navy-900 text-white text-xs font-bold tracking-wider text-center">
+                    <div class="py-2.5">SUN</div><div class="py-2.5">MON</div><div class="py-2.5">TUE</div>
+                    <div class="py-2.5">WED</div><div class="py-2.5">THU</div><div class="py-2.5">FRI</div><div class="py-2.5">SAT</div>
+                </div>
+                <div id="calendar-grid" class="grid grid-cols-7 gap-px bg-ringray/20"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let allStreams = [];
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth() + 1;
+
+        function applyBranding() {
+            if (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.branding) {
+                document.getElementById('doc-title').innerText = UI_CONFIG.branding.pageTitle || "Live Analytics";
+                document.getElementById('lobby-main-title').innerText = UI_CONFIG.branding.mainTitle || "Stream Analytics";
+                document.getElementById('lobby-sub-title').innerText = UI_CONFIG.branding.subTitle || "";
+            }
+        }
+
+        function goToDashboard(streamId) {
+            window.location.href = `dashboard.html?stream_id=${streamId}`;
+        }
+
+        async function loadGlobalIndex() {
+            const baseUrl = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.dataSource?.baseUrl) ? UI_CONFIG.dataSource.baseUrl : '.';
+            const indexUrl = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.dataSource?.globalIndex) ? UI_CONFIG.dataSource.globalIndex : '/global_index.json';
+
+            try {
+                const res = await fetch(`${baseUrl}${indexUrl}?` + new Date().getTime());
+                allStreams = await res.json();
+                
+                if (allStreams.length > 0) {
+                    const lastStream = allStreams[allStreams.length - 1];
+                    const dateStr = lastStream.stream_id.split('_')[0];
+                    currentYear = parseInt(dateStr.substring(0, 4));
+                    currentMonth = parseInt(dateStr.substring(4, 6));
+                }
+                renderCalendar();
+            } catch (err) {
+                console.error("카탈로그 로드 실패:", err);
+            }
+        }
+
+        function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+            if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            document.getElementById('calendar-month-title').innerText = `${currentYear}년 ${currentMonth}월`;
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay(); 
+            const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+            const streamsByDate = {};
+            allStreams.forEach(stream => {
+                const match = stream.stream_id.match(/^(\d{4})(\d{2})(\d{2})/);
+                if (match) {
+                    const [_, y, m, d] = match;
+                    if (parseInt(y) === currentYear && parseInt(m) === currentMonth) {
+                        const dayNum = parseInt(d);
+                        if (!streamsByDate[dayNum]) streamsByDate[dayNum] = [];
+                        streamsByDate[dayNum].push(stream);
+                    }
+                }
+            });
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += `<div class="bg-rinwhite/30 min-h-[120px]"></div>`;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const streams = streamsByDate[d] || [];
+                let barsHtml = '';
+
+                streams.forEach(stream => {
+                    barsHtml += `
+                        <div onclick="goToDashboard('${stream.stream_id}')" class="relative group bg-azure hover:bg-navy-900 text-white text-xs font-bold px-2 py-1.5 rounded shadow-sm cursor-pointer transition-colors truncate z-20">
+                            ${stream.title}
+                            <div class="delay-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-3 bg-navy-900 text-white text-xs rounded-lg shadow-xl z-50 whitespace-normal pointer-events-none border border-ringray/30 text-center">
+                                <div class="font-bold mb-1 border-b border-ringray/30 pb-1">${stream.title}</div>
+                                ⏱️ 방송 시간: ${stream.duration}<br>
+                                🔥 분위기 점수: ${stream.hype_score}점<br>
+                                🎬 클립 명장면: ${stream.legendary_count}개
+                            </div>
+                        </div>
+                    `;
+                });
+
+                grid.innerHTML += `
+                    <div class="bg-white min-h-[120px] p-2 flex flex-col transition-colors hover:bg-rinwhite/30 relative z-10">
+                        <span class="text-sm font-bold text-ringray mb-1 ${streams.length > 0 ? 'text-navy-900' : ''}">${d}</span>
+                        <div class="flex flex-col gap-1 z-20">
+                            ${barsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            const totalCells = firstDay + daysInMonth;
+            const remainingCells = (7 - (totalCells % 7)) % 7;
+            for (let i = 0; i < remainingCells; i++) {
+                grid.innerHTML += `<div class="bg-rinwhite/30 min-h-[120px]"></div>`;
+            }
+        }
+
+        window.onload = () => {
+            applyBranding();
+            loadGlobalIndex();
+        };
+    </script>
+</body>
+</html>

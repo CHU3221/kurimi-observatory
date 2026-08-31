@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="doc-title">쿠리미 관측소 - 대시보드</title>
+    
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
+    <script src="config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: { 900: '#0B132B', 700: '#2A365C' },
+                        azure: '#007FFF',
+                        rinwhite: '#E2EAEB',
+                        ringray: '#9FA9BE',
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
+    
+    <style>
+        .delay-tooltip { visibility: hidden; opacity: 0; transition: opacity 0.3s ease 1s, visibility 0.3s ease 1s; }
+        .group:hover .delay-tooltip { visibility: visible; opacity: 1; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #9FA9BE; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-rinwhite text-navy-900 font-sans h-screen flex flex-col p-6 overflow-hidden overscroll-none">
+
+    <header class="flex-none flex justify-between items-center mb-4 px-2">
+        <div class="flex items-center gap-4">
+            <button onclick="window.location.href='index.html'" class="flex items-center gap-1.5 text-sm bg-white hover:bg-navy-900 hover:text-white text-navy-700 font-bold px-3 py-1.5 rounded-lg border border-ringray/30 transition-all shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                로비
+            </button>
+            <h1 class="text-2xl font-bold flex items-center gap-3">
+                <span class="w-4 h-4 bg-azure rounded-full shadow-sm"></span>
+                <span id="brand-main-title">로딩 중...</span> 
+                <span id="brand-sub-title" class="text-navy-700 text-lg font-normal"></span>
+            </h1>
+            <h2 id="stream-title" class="text-sm font-semibold text-ringray ml-4 border-l border-ringray/30 pl-4">방송 데이터를 불러오는 중...</h2>
+        </div>
+        <div id="data-level-badge" class="bg-ringray/20 text-navy-700 px-3 py-1 rounded-full text-xs font-semibold">
+            Summary Mode (1분 단위)
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col gap-5 min-h-0">
+        <div class="bg-white border border-ringray/50 rounded-2xl p-5 h-[55%] flex flex-col min-h-0 shadow-sm relative">
+            <div class="flex-none flex justify-between items-center mb-4">
+                <h2 class="text-sm font-bold text-navy-700">시간대별 채팅 분포</h2>
+                <div class="flex gap-2">
+                    <button onclick="clearHighlight()" id="btn-clear-highlight" class="hidden text-xs bg-rinwhite hover:bg-red-50 text-navy-700 hover:text-red-500 font-semibold px-4 py-1.5 rounded-lg border border-ringray/30 transition-colors">
+                        단어 강조 끄기
+                    </button>
+                    <button onclick="resetChartZoom()" class="text-xs bg-rinwhite hover:bg-azure hover:text-white text-navy-700 font-semibold px-4 py-1.5 rounded-lg border border-ringray/30 transition-colors">
+                        전체 보기
+                    </button>
+                </div>
+            </div>
+            <div class="relative w-full flex-1 touch-action-none min-h-0">
+                <canvas id="minimapChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white border border-ringray/50 rounded-2xl h-[45%] flex flex-col min-h-0 shadow-sm relative overflow-hidden">
+            <div class="flex-none flex border-b border-ringray/30 bg-rinwhite/50 px-4 pt-2">
+                <button onclick="switchTab('explore')" id="tab-btn-explore" class="px-6 py-3 text-sm font-bold border-b-2 border-azure text-azure transition-colors">탐색</button>
+                <button onclick="switchTab('summary')" id="tab-btn-summary" class="px-6 py-3 text-sm font-semibold border-b-2 border-transparent text-navy-700 hover:text-azure transition-colors">방송 요약</button>
+                <button onclick="switchTab('legendary')" id="tab-btn-legendary" class="px-6 py-3 text-sm font-semibold border-b-2 border-transparent text-navy-700 hover:text-azure transition-colors">하이라이트</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 relative">
+                <div id="tab-content-explore" class="h-full flex flex-col justify-center">
+                    <div id="info-placeholder" class="text-center text-navy-700 font-medium h-full flex items-center justify-center">차트의 특정 지점을 클릭하여 해당 구간의 채팅을 확인하세요.</div>
+                    <div id="info-content" class="hidden flex items-center justify-between w-full h-full">
+                        <div class="flex flex-col gap-1 w-1/4 pr-4">
+                            <span class="text-navy-700 text-sm font-semibold">업타임 (Uptime)</span>
+                            <div class="flex items-end gap-3">
+                                <span id="info-uptime" class="text-4xl font-bold text-azure font-mono tracking-tight">00:00:00</span>
+                                <a id="btn-watch-vod" href="#" target="_blank" class="mb-1 text-xs bg-navy-900 hover:bg-azure text-white font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    바로 시청하기
+                                </a>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-4 w-1/4 border-l border-ringray/30 pl-8 pr-4">
+                            <div>
+                                <span class="text-navy-700 text-sm font-semibold block mb-1">최고 채팅 속도</span>
+                                <span id="info-peak" class="text-3xl font-bold text-navy-900">0 <span class="text-sm font-normal text-navy-700">chats/s</span></span>
+                            </div>
+                            <div>
+                                <span class="text-navy-700 text-sm font-semibold block mb-1">구간 총 채팅</span>
+                                <span id="info-sum" class="text-xl font-bold text-navy-900">0</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col w-1/2 border-l border-ringray/30 pl-8 h-full min-h-0">
+                            <span class="text-navy-700 text-sm font-semibold block mb-3">해당 시점 주요 채팅</span>
+                            <div id="info-chats" class="flex flex-wrap gap-2 overflow-y-auto pr-2 content-start items-center"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-content-summary" class="hidden h-full flex gap-6">
+                    <div class="w-1/3 grid grid-cols-2 gap-4 place-content-start">
+                        <div class="bg-rinwhite p-4 rounded-xl shadow-sm">
+                            <span class="text-xs text-navy-700 font-semibold block mb-1">방송 시간</span>
+                            <div id="stat-time" class="text-xl font-bold text-navy-900">00:00:00</div>
+                        </div>
+                        <div class="bg-rinwhite p-4 rounded-xl shadow-sm">
+                            <span class="text-xs text-navy-700 font-semibold block mb-1">최고 속도 (Peak Rate)</span>
+                            <div id="stat-peak" class="text-xl font-bold text-azure">0 <span class="text-xs font-normal text-navy-700">/sec</span></div>
+                        </div>
+                        <div class="bg-rinwhite p-4 rounded-xl shadow-sm relative group cursor-help">
+                            <div class="flex items-center gap-1 mb-1">
+                                <span class="text-xs text-navy-700 font-semibold">하이라이트</span>
+                                <svg class="w-3.5 h-3.5 text-ringray group-hover:text-azure transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div id="stat-legendary" class="text-xl font-bold text-navy-900">0 <span class="text-xs font-normal text-navy-700">회</span></div>
+                            <div class="delay-tooltip absolute top-full left-0 mt-2 w-48 p-3 bg-navy-900 text-white text-xs rounded-lg shadow-lg z-50">
+                                이번 방송 중 최고 채팅 속도의 70% 이상을 달성을 기준으로 집계합니다.
+                            </div>
+                        </div>
+                        <div class="bg-rinwhite p-4 rounded-xl shadow-sm relative group cursor-help">
+                            <div class="flex items-center gap-1 mb-1">
+                                <span class="text-xs text-navy-700 font-semibold">분위기 점수</span>
+                                <svg class="w-3.5 h-3.5 text-ringray group-hover:text-azure transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div id="stat-hype" class="text-xl font-bold text-navy-900">0.0</div>
+                            <div class="delay-tooltip absolute top-full left-0 mt-2 w-48 p-3 bg-navy-900 text-white text-xs rounded-lg shadow-lg z-50">
+                                이번 방송의 분당 평균 채팅량(Average Chats/min)을 기반으로 계산된 전반적인 열기 점수입니다.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-2/3 border-l border-ringray/30 pl-6 flex flex-col min-h-0">
+                        <span class="text-sm text-navy-700 font-semibold block mb-3 flex-none">가장 많이 쓰인 단어 Top 10 <span class="text-xs font-normal text-ringray">(클릭 시 차트 강조)</span></span>
+                        <div id="stat-words" class="grid grid-cols-5 gap-3 overflow-y-auto pr-2 flex-1 place-content-start"></div>
+                    </div>
+                </div>
+
+                <div id="tab-content-legendary" class="hidden h-full flex flex-col min-h-0">
+                    <div class="flex-none flex justify-between items-end mb-4">
+                        <span class="text-sm text-navy-700 font-semibold">하이라이트 순위 <span class="text-xs font-normal text-ringray">(동일 속도 시 총 채팅량 우선 정렬)</span></span>
+                    </div>
+                    <div id="legendary-list" class="flex-1 overflow-y-auto flex flex-wrap gap-4 items-start content-start pr-2"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let minimapChart;
+        let summaryData = [];
+        let streamMeta = {};
+        let chunkCache = {};
+        let currentMode = 'summary'; 
+        let currentPlayheadTime = null; 
+        let activeHighlightWord = null; 
+
+        function applyBranding() {
+            if (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.branding) {
+                document.getElementById('doc-title').innerText = UI_CONFIG.branding.pageTitle || "Live Analytics";
+                document.getElementById('brand-main-title').innerText = UI_CONFIG.branding.mainTitle || "쿠리미 분석기";
+                document.getElementById('brand-sub-title').innerText = UI_CONFIG.branding.subTitle ? `| ${UI_CONFIG.branding.subTitle}` : "";
+            }
+        }
+
+        window.onload = () => {
+            applyBranding();
+            initDashboard();
+        };
+
+        document.getElementById('minimapChart').addEventListener('wheel', e => e.preventDefault(), { passive: false });
+
+        function formatUptime(totalSec) {
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = Math.floor(totalSec % 60);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return "";
+            return str.replace(/[&<>'"]/g, function(tag) {
+                const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
+                return charsToReplace[tag] || tag;
+            });
+        }
+
+        function renderChatWord(word) {
+            if (!word) return "";
+            const escapedWord = escapeHTML(word);
+            const cleanWord = escapedWord.replace(/^:|:$/g, '');
+            if (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.emotes && UI_CONFIG.emotes[cleanWord]) {
+                return `<img src="${UI_CONFIG.emotes[cleanWord]}" alt="${cleanWord}" class="max-h-6 w-auto inline-block object-contain align-middle" title="${cleanWord}">`;
+            }
+            return `<span class="font-bold text-navy-900 align-middle">${cleanWord}</span>`;
+        }
+
+        function switchTab(tabId) {
+            ['explore', 'summary', 'legendary'].forEach(id => {
+                const btn = document.getElementById(`tab-btn-${id}`);
+                const content = document.getElementById(`tab-content-${id}`);
+                if (id === tabId) {
+                    btn.classList.replace('text-navy-700', 'text-azure');
+                    btn.classList.replace('font-semibold', 'font-bold');
+                    btn.classList.replace('border-transparent', 'border-azure');
+                    content.classList.remove('hidden');
+                } else {
+                    btn.classList.replace('text-azure', 'text-navy-700');
+                    btn.classList.replace('font-bold', 'font-semibold');
+                    btn.classList.replace('border-azure', 'border-transparent');
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+        const playheadPlugin = {
+            id: 'playhead',
+            afterDraw: (chart) => {
+                if (currentPlayheadTime === null) return;
+                const xScale = chart.scales.x;
+                const xPos = xScale.getPixelForValue(currentPlayheadTime);
+                if (xPos < xScale.left || xPos > xScale.right) return;
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(xPos, chart.scales.y.top);
+                ctx.lineTo(xPos, chart.scales.y.bottom);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.colors) ? UI_CONFIG.colors.line : '#007FFF'; 
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.restore();
+            }
+        };
+
+        async function initDashboard() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const streamId = urlParams.get('stream_id');
+                
+                if (!streamId) {
+                    throw new Error("선택된 방송 ID가 없습니다.");
+                }
+
+                const baseUrl = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.dataSource?.baseUrl) ? UI_CONFIG.dataSource.baseUrl : '.';
+                const streamUrl = `${baseUrl}/streams/${streamId}/summary.json?` + new Date().getTime();
+
+                const res = await fetch(streamUrl);
+                const json = await res.json();
+                
+                streamMeta = json.meta || { title: "로컬 방송 데이터", global_top_words: [] };
+                summaryData = json.data_points.map(d => ({ x: d.t, y: d.peak_v || d.v, raw: d }));
+
+                document.getElementById('stream-title').innerText = streamMeta.title || "[8/28] 라이브 스트리밍";
+                buildSummaryAndLegendary(summaryData, streamMeta);
+
+                const globalMinX = summaryData[0].x;
+                const globalMaxX = summaryData[summaryData.length - 1].x;
+                const globalMaxY = Math.max(...summaryData.map(d => d.y));
+                
+                const padding = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.yAxisPadding) ? UI_CONFIG.yAxisPadding : 0.2;
+                const fixedYMax = Math.ceil(globalMaxY * (1 + padding));
+                
+                const zoomRange = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.maxZoomRangeSec) ? UI_CONFIG.maxZoomRangeSec : 600;
+                const lineColor = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.colors) ? UI_CONFIG.colors.line : '#007FFF';
+                const fillColor = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.colors) ? UI_CONFIG.colors.fill : 'rgba(0, 127, 255, 0.2)';
+                const highlightColor = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.colors && UI_CONFIG.colors.highlight) ? UI_CONFIG.colors.highlight : 'rgba(0, 127, 255, 0.25)';
+
+                const ctx = document.getElementById('minimapChart').getContext('2d');
+                
+                minimapChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Main Stream',
+                                data: summaryData,
+                                borderColor: lineColor,
+                                backgroundColor: fillColor,
+                                borderWidth: 2.5,
+                                fill: true,
+                                tension: 0.4, 
+                                pointRadius: 0,
+                                pointHoverRadius: 6,
+                                pointHoverBackgroundColor: '#FFFFFF',
+                                pointHoverBorderColor: '#0B132B',
+                                pointHoverBorderWidth: 2,
+                                parsing: false,
+                                order: 1 
+                            },
+                            {
+                                label: 'Word Highlight',
+                                data: [], 
+                                type: 'bar',
+                                backgroundColor: highlightColor,
+                                barThickness: 4,
+                                order: 2 
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+                        onClick: async (e, elements) => {
+                            if (elements.length > 0) {
+                                const mainEl = elements.find(el => el.datasetIndex === 0);
+                                let dataPoint;
+                                if (mainEl) {
+                                    dataPoint = minimapChart.data.datasets[0].data[mainEl.index];
+                                } else {
+                                    const highlightEl = elements[0];
+                                    const clickedTimeX = minimapChart.data.datasets[1].data[highlightEl.index].x;
+                                    dataPoint = minimapChart.data.datasets[0].data.find(d => d.x === clickedTimeX);
+                                }
+                                if (dataPoint) await jumpToPoint(dataPoint.x, dataPoint.raw);
+                            }
+                        },
+                        scales: {
+                            x: { type: 'linear', min: globalMinX, max: globalMaxX, offset: false, grid: { color: 'rgba(159, 169, 190, 0.2)' }, ticks: { color: '#2A365C', maxTicksLimit: 12, callback: v => formatUptime(v) } },
+                            y: { max: fixedYMax, grid: { color: 'rgba(159, 169, 190, 0.2)' }, ticks: { color: '#2A365C' }, beginAtZero: true }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    title: (ctx) => formatUptime(ctx[0].raw.x),
+                                    label: (ctx) => {
+                                        if (ctx.datasetIndex === 1) return `단어 감지됨`;
+                                        return currentMode === 'summary' ? `최고 속도: ${ctx.raw.y} (총량: ${ctx.raw.raw.sum_v})` : `순간 속도: ${ctx.raw.y} (1초)`;
+                                    }
+                                }
+                            },
+                            zoom: {
+                                pan: { enabled: true, mode: 'x', onPanComplete: checkZoomLevel },
+                                zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x', onZoomComplete: checkZoomLevel },
+                                limits: { x: { min: 'original', max: 'original', minRange: zoomRange } }
+                            }
+                        }
+                    },
+                    plugins: [playheadPlugin]
+                });
+            } catch (err) {
+                console.error("데이터 로드 실패:", err);
+                const titleEl = document.getElementById('stream-title');
+                if (titleEl) {
+                    titleEl.innerText = "데이터를 불러올 수 없습니다. 경로를 확인해주세요.";
+                    titleEl.classList.replace('text-ringray', 'text-red-500');
+                }
+            }
+        }
+
+        function highlightWordOnChart(word, cardId) {
+            if (activeHighlightWord === word) {
+                clearHighlight();
+                return;
+            }
+
+            activeHighlightWord = word;
+            const maxY = minimapChart.scales.y.max;
+            const highlightData = summaryData.filter(d => 
+                d.raw.top && d.raw.top.some(t => t.w === word)
+            ).map(d => ({ x: d.x, y: maxY }));
+
+            minimapChart.data.datasets[1].data = highlightData;
+            minimapChart.update('none');
+            
+            document.getElementById('btn-clear-highlight').classList.remove('hidden');
+
+            document.querySelectorAll('.word-card').forEach(el => {
+                el.classList.remove('bg-azure/20', 'border-azure');
+                el.classList.add('bg-rinwhite', 'border-ringray/30');
+            });
+            const activeCard = document.getElementById(cardId);
+            if (activeCard) {
+                activeCard.classList.remove('bg-rinwhite', 'border-ringray/30');
+                activeCard.classList.add('bg-azure/20', 'border-azure');
+            }
+        }
+
+        function clearHighlight() {
+            activeHighlightWord = null;
+            minimapChart.data.datasets[1].data = [];
+            minimapChart.update('none');
+            document.getElementById('btn-clear-highlight').classList.add('hidden');
+            
+            document.querySelectorAll('.word-card').forEach(el => {
+                el.classList.remove('bg-azure/20', 'border-azure');
+                el.classList.add('bg-rinwhite', 'border-ringray/30');
+            });
+        }
+
+        function getRankStyle(idx) {
+            let style = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.rankStyles) ? UI_CONFIG.rankStyles.default : "text-navy-900";
+            if (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.rankStyles) {
+                if (idx === 0) style = UI_CONFIG.rankStyles.gold || style;
+                else if (idx === 1) style = UI_CONFIG.rankStyles.silver || style;
+                else if (idx === 2) style = UI_CONFIG.rankStyles.bronze || style;
+            } else {
+                if (idx === 0) style = "text-[#FFD700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)] [-webkit-text-stroke:1px_#0B132B]";
+                else if (idx === 1) style = "text-[#C0C0C0] drop-shadow-[0_0_8px_rgba(192,192,192,0.8)] [-webkit-text-stroke:1px_#0B132B]";
+                else if (idx === 2) style = "text-[#CD7F32] drop-shadow-[0_0_8px_rgba(205,127,50,0.8)] [-webkit-text-stroke:1px_#0B132B]";
+            }
+            return style;
+        }
+
+        function buildSummaryAndLegendary(data, meta) {
+            const minTime = data[0].x;
+            const maxTime = data[data.length - 1].x;
+            const globalMaxY = Math.max(...data.map(d => d.y));
+            
+            document.getElementById('stat-time').innerText = formatUptime(maxTime - minTime);
+            document.getElementById('stat-peak').innerHTML = `${globalMaxY} <span class="text-sm font-normal text-navy-700">chats/s</span>`;
+            
+            const legendaryThreshold = globalMaxY * 0.7; 
+            
+            const clusteredLegendary = [];
+            let currentCluster = [];
+
+            data.forEach(d => {
+                if (d.y >= legendaryThreshold) {
+                    currentCluster.push(d); 
+                } else {
+                    if (currentCluster.length > 0) {
+                        const peakPoint = currentCluster.reduce((max, pt) => (pt.y > max.y) ? pt : max, currentCluster[0]);
+                        clusteredLegendary.push(peakPoint);
+                        currentCluster = [];
+                    }
+                }
+            });
+            if (currentCluster.length > 0) {
+                const peakPoint = currentCluster.reduce((max, pt) => (pt.y > max.y) ? pt : max, currentCluster[0]);
+                clusteredLegendary.push(peakPoint);
+            }
+
+            const legendaryPoints = clusteredLegendary.sort((a, b) => (b.y - a.y) || ((b.raw.sum_v || 0) - (a.raw.sum_v || 0)));
+                        
+            document.getElementById('stat-legendary').innerHTML = `${legendaryPoints.length} <span class="text-sm font-normal text-navy-700">회</span>`;
+            
+            const totalSum = data.reduce((acc, cur) => acc + (cur.raw.sum_v || 0), 0);
+            const avgChatPerMin = totalSum / (data.length || 1);
+            const hypeScore = Math.min(99.9, (avgChatPerMin / 200) * 100).toFixed(1); 
+            document.getElementById('stat-hype').innerText = hypeScore;
+
+            const wordsHtml = meta.global_top_words.slice(0, 10).map((w, idx) => {
+                const rankStyle = getRankStyle(idx);
+                const safeWord = escapeHTML(w.w).replace(/'/g, "\\'");
+                const cardId = `word-card-${idx}`;
+                
+                return `
+                    <div id="${cardId}" onclick="highlightWordOnChart('${safeWord}', '${cardId}')" class="word-card bg-rinwhite p-2 rounded-xl border border-ringray/30 shadow-sm hover:border-azure cursor-pointer transition-all flex flex-col items-center justify-center gap-1 overflow-hidden">
+                        <span class="text-lg font-black ${rankStyle}">${idx + 1}</span>
+                        <div class="h-6 flex items-center justify-center">${renderChatWord(w.w)}</div>
+                        <span class="text-xs font-semibold text-navy-700">${w.c.toLocaleString()}회</span>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('stat-words').innerHTML = wordsHtml || "<div class='text-sm text-ringray'>데이터 없음</div>";
+            const legendHtml = legendaryPoints.map((d, idx) => {
+                const rankStyle = getRankStyle(idx);
+                const topWordsHtml = (d.raw.top && d.raw.top.length > 0)
+                    ? d.raw.top.slice(0, 3).map(tw => `<span class="bg-white border border-ringray/40 px-1.5 py-0.5 rounded text-xs font-semibold text-navy-900 inline-flex items-center shadow-sm h-6">${renderChatWord(tw.w)}</span>`).join(' ')
+                    : `<span class="text-xs text-ringray">없음</span>`;
+
+                const rawJson = JSON.stringify(d.raw).replace(/"/g, '&quot;');
+                
+                return `
+                    <div onclick="jumpToPoint(${d.x}, ${rawJson})" class="w-64 bg-rinwhite p-4 rounded-xl border border-ringray/30 shadow-sm hover:border-azure hover:shadow-md cursor-pointer transition-all flex flex-col gap-1 relative">
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-black ${rankStyle}">#${idx + 1}</span>
+                            <span class="font-mono text-sm text-azure font-bold">${formatUptime(d.x)}</span>
+                        </div>
+                        <div class="text-3xl font-bold text-navy-900 leading-tight">${d.y} <span class="text-sm font-normal text-navy-700">chats/s</span></div>
+                        <div class="text-xs font-semibold text-ringray mb-2">구간 총 채팅: <span class="text-navy-700">${(d.raw.sum_v || 0).toLocaleString()}</span>회</div>
+                        <div class="flex flex-wrap gap-1">${topWordsHtml}</div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('legendary-list').innerHTML = legendHtml;
+        }
+
+        async function jumpToPoint(timeX, rawData) {
+            currentPlayheadTime = timeX;
+            minimapChart.update('none'); 
+            await displayDetailPanel(timeX, rawData);
+            switchTab('explore');
+        }
+
+        async function checkZoomLevel({ chart }) {
+            const minX = chart.scales.x.min;
+            const maxX = chart.scales.x.max;
+            const visibleSec = maxX - minX;
+            
+            const transitionSec = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.chunkTransitionRangeSec) ? UI_CONFIG.chunkTransitionRangeSec : 1800;
+
+            if (visibleSec <= transitionSec) {
+                if (currentMode !== 'chunk') {
+                    document.getElementById('data-level-badge').innerHTML = "Detail Mode (1초 단위)";
+                    document.getElementById('data-level-badge').className = "bg-azure/20 text-azure px-3 py-1 rounded-full text-xs font-bold";
+                    currentMode = 'chunk';
+                }
+                await loadChunksForRange(minX, maxX, chart);
+            } else {
+                if (currentMode !== 'summary') {
+                    document.getElementById('data-level-badge').innerHTML = "Summary Mode (1분 단위)";
+                    document.getElementById('data-level-badge').className = "bg-ringray/20 text-navy-700 px-3 py-1 rounded-full text-xs font-semibold";
+                    currentMode = 'summary';
+                    chart.data.datasets[0].data = summaryData;
+                    chart.update('none');
+                }
+            }
+        }
+
+        async function loadChunksForRange(minSec, maxSec, chart) {
+            const startHour = Math.floor(Math.max(0, minSec) / 3600);
+            const endHour = Math.floor(maxSec / 3600);
+            
+            const fetchPromises = [];
+            const hoursToFetch = [];
+            const urlParams = new URLSearchParams(window.location.search);
+            const streamId = urlParams.get('stream_id');
+            const baseUrl = (typeof UI_CONFIG !== 'undefined' && UI_CONFIG.dataSource?.baseUrl) ? UI_CONFIG.dataSource.baseUrl : '.';
+
+            for (let h = startHour; h <= endHour; h++) {
+                const hourStr = String(h).padStart(2, '0');
+                if (!chunkCache[hourStr]) {
+                    hoursToFetch.push(hourStr);
+                    fetchPromises.push(
+                        fetch(`${baseUrl}/streams/${streamId}/chunk_${hourStr}.json`)
+                            .then(res => res.ok ? res.json() : null)
+                            .catch(() => null)
+                    );
+                }
+            }
+
+            if (fetchPromises.length > 0) {
+                const results = await Promise.all(fetchPromises);
+                results.forEach((json, idx) => {
+                    const hourStr = hoursToFetch[idx];
+                    chunkCache[hourStr] = json ? json.data_points.map(d => ({ x: d.t, y: d.v, raw: d })) : [];
+                });
+            }
+
+            let combinedData = [];
+            for (let h = startHour; h <= endHour; h++) {
+                const hourStr = String(h).padStart(2, '0');
+                combinedData = combinedData.concat(chunkCache[hourStr]);
+            }
+            
+            if (combinedData.length > 0) {
+                combinedData.sort((a, b) => a.x - b.x); 
+                const interpolatedData = [];
+                let currentIndex = 0;
+                const minT = combinedData[0].x;
+                const maxT = combinedData[combinedData.length - 1].x;
+
+                for (let t = minT; t <= maxT; t++) {
+                    if (currentIndex < combinedData.length && combinedData[currentIndex].x === t) {
+                        interpolatedData.push(combinedData[currentIndex]);
+                        currentIndex++;
+                    } else {
+                        interpolatedData.push({
+                            x: t, y: 0, raw: { u: formatUptime(t), v: 0, top: [] }
+                        });
+                    }
+                }
+                combinedData = interpolatedData;
+            }
+            
+            chart.data.datasets[0].data = combinedData;
+            chart.update('none');
+        }
+
+        async function displayDetailPanel(timeX, rawPoint) {
+            document.getElementById('info-placeholder').classList.add('hidden');
+            document.getElementById('info-content').classList.remove('hidden');
+            document.getElementById('info-content').classList.add('flex');
+            
+            document.getElementById('info-uptime').innerText = rawPoint.u;
+            document.getElementById('info-peak').innerHTML = `${rawPoint.peak_v || rawPoint.v} <span class="text-sm font-normal text-navy-700">chats/sec</span>`;
+            
+            if (currentMode === 'summary') {
+                document.getElementById('info-sum').innerHTML = `${rawPoint.sum_v} <span class="text-sm font-normal text-navy-700">chats/min</span>`;
+            } else {
+                document.getElementById('info-sum').innerHTML = `- <span class="text-sm font-normal text-ringray">(1초 단위)</span>`;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const fullStreamId = urlParams.get('stream_id');
+            if (fullStreamId && fullStreamId.includes('_')) {
+                const vodId = fullStreamId.split('_')[1];
+                document.getElementById('btn-watch-vod').href = `https://chzzk.naver.com/video/${vodId}?currentTime=${timeX}`;
+            }
+            
+            const chatsContainer = document.getElementById('info-chats');
+            chatsContainer.innerHTML = ''; 
+            
+            const chatList = rawPoint.top || [];
+            if (chatList.length > 0) {
+                chatList.forEach(chat => {
+                    const badge = document.createElement('div');
+                    badge.className = 'bg-rinwhite border border-ringray/40 px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm h-10';
+                    badge.innerHTML = `${renderChatWord(chat.w)} <span class="text-xs font-semibold text-navy-700 ml-1">(${chat.c})</span>`;
+                    chatsContainer.appendChild(badge);
+                });
+            } else {
+                chatsContainer.innerHTML = `<span class="text-navy-700 text-sm">기록된 채팅이 없습니다.</span>`;
+            }
+        }
+
+        function resetChartZoom() {
+            clearHighlight();
+            if(minimapChart) { minimapChart.resetZoom(); checkZoomLevel({ chart: minimapChart }); }
+        }
+    </script>
+</body>
+</html>
