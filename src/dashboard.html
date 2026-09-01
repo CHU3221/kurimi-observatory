@@ -74,13 +74,13 @@
 
         <div class="bg-white border border-ringray/50 rounded-2xl h-[45%] flex flex-col min-h-0 shadow-sm relative overflow-hidden">
             <div class="flex-none flex border-b border-ringray/30 bg-rinwhite/50 px-4 pt-2">
-                <button onclick="switchTab('explore')" id="tab-btn-explore" class="px-6 py-3 text-sm font-bold border-b-2 border-azure text-azure transition-colors">탐색</button>
-                <button onclick="switchTab('summary')" id="tab-btn-summary" class="px-6 py-3 text-sm font-semibold border-b-2 border-transparent text-navy-700 hover:text-azure transition-colors">방송 요약</button>
+                <button onclick="switchTab('explore')" id="tab-btn-explore" class="px-6 py-3 text-sm font-semibold border-b-2 border-transparent text-navy-700 hover:text-azure transition-colors">탐색</button>
+                <button onclick="switchTab('summary')" id="tab-btn-summary" class="px-6 py-3 text-sm font-bold border-b-2 border-azure text-azure transition-colors">방송 요약</button>
                 <button onclick="switchTab('legendary')" id="tab-btn-legendary" class="px-6 py-3 text-sm font-semibold border-b-2 border-transparent text-navy-700 hover:text-azure transition-colors">하이라이트</button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-6 relative">
-                <div id="tab-content-explore" class="h-full flex flex-col justify-center">
+                <div id="tab-content-explore" class="hidden h-full flex flex-col justify-center">
                     <div id="info-placeholder" class="text-center text-navy-700 font-medium h-full flex items-center justify-center">차트의 특정 지점을 클릭하여 해당 구간의 채팅을 확인하세요.</div>
                     <div id="info-content" class="hidden flex items-center justify-between w-full h-full">
                         <div class="flex flex-col gap-1 w-1/4 pr-4">
@@ -110,7 +110,7 @@
                     </div>
                 </div>
 
-                <div id="tab-content-summary" class="hidden h-full flex gap-6">
+                <div id="tab-content-summary" class="h-full flex gap-6">
                     <div class="w-1/3 grid grid-cols-2 gap-4 place-content-start">
                         <div class="bg-rinwhite p-4 rounded-xl shadow-sm">
                             <span class="text-xs text-navy-700 font-semibold block mb-1">방송 시간</span>
@@ -450,7 +450,7 @@
             
             const totalSum = data.reduce((acc, cur) => acc + (cur.raw.sum_v || 0), 0);
             const avgChatPerMin = totalSum / (data.length || 1);
-            const hypeScore = Math.min(99.9, (avgChatPerMin / 200) * 100).toFixed(1); 
+            const hypeScore = ((avgChatPerMin / 200) * 100).toFixed(1);
             document.getElementById('stat-hype').innerText = hypeScore;
 
             const wordsHtml = meta.global_top_words.slice(0, 10).map((w, idx) => {
