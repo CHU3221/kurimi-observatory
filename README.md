@@ -8,8 +8,8 @@ STELLIVE 소속 아오쿠모 린(Aokumo Rin)님의 치지직(Chzzk) 라이브 �
 
 오픈소스 기반 프로젝트인 [Chat-Hype-Meter](https://github.com/CHU3221/ChatHypeMeter) 엔진을 활용하여 구축되었습니다.
 
-[kurimi-obs Lobby](https://raw.githubusercontent.com/CHU3221/kurimi-observatory/main/docs/lobby.png)
-[kurimi-obs Dashboard](https://raw.githubusercontent.com/CHU3221/kurimi-observatory/main/docs/dashboard.png)
+![kurimi-obs Lobby](https://raw.githubusercontent.com/CHU3221/kurimi-observatory/main/docs/lobby.png)
+![kurimi-obs Dashboard](https://raw.githubusercontent.com/CHU3221/kurimi-observatory/main/docs/dashboard.png)
 ---
 
 ## 소개
