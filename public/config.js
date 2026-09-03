@@ -66,6 +66,7 @@ const UI_CONFIG = {
         "Kumorin": "./assets/Sub Emotes/Kumorin.png",
         "punchrin": "./assets/Sub Emotes/punchrin.gif",
         "aokumorinPunchrin": "./assets/Sub Emotes/punchrin.gif",
-        "Question": "./assets/Sub Emotes/Question.png"
+        "Question": "./assets/Sub Emotes/Question.png",
+        "d_108": "./assets/Emotes/c_36.png"
     }
 };
